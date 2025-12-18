@@ -4,7 +4,10 @@ A full-stack web application that helps users manage their personal finances by 
 
 This project is built with a modern MERN-style architecture and focuses on clean authentication, real-world data modeling, and practical financial insights.
 
-## 🚀 Features
+## Live Demo
+https://personal-finance-tracker-v1.vercel.app
+
+## Features
 
 ### Authentication & Security
 - User registration and login with JWT authentication
