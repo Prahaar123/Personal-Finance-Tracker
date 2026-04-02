@@ -26,6 +26,7 @@ const updateProfile = async (req, res) => {
     if (user) {
       user.name = req.body.name || user.name;
       user.currency = req.body.currency || user.currency;
+      user.avatar = req.body.avatar !== undefined ? req.body.avatar : user.avatar;
       
       if (req.body.financialGoals) {
         user.financialGoals.monthlySavings = req.body.financialGoals.monthlySavings || user.financialGoals.monthlySavings;
@@ -38,6 +39,7 @@ const updateProfile = async (req, res) => {
         name: updatedUser.name,
         email: updatedUser.email,
         currency: updatedUser.currency,
+        avatar: updatedUser.avatar,
         financialGoals: updatedUser.financialGoals,
       });
     } else {

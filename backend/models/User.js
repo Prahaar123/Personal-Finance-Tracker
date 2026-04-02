@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema(
       default: 'USD',
       enum: ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'CNY', 'AUD', 'CAD'],
     },
+    avatar: {
+      type: String,
+      default: '',
+    },
     financialGoals: {
       monthlySavings: {
         type: Number,

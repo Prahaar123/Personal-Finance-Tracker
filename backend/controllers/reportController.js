@@ -1,6 +1,35 @@
+const fs = require('fs');
 const Transaction = require('../models/Transaction');
 const { Parser } = require('json2csv');
 const PDFDocument = require('pdfkit');
+
+const FONT_REGULAR = 'C:/Windows/Fonts/arial.ttf';
+const FONT_BOLD = 'C:/Windows/Fonts/arialbd.ttf';
+
+const formatCurrency = (value, currencyCode = 'USD') =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: currencyCode || 'USD',
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number(value) || 0);
+
+const applyPdfFonts = (doc) => {
+  if (fs.existsSync(FONT_REGULAR) && fs.existsSync(FONT_BOLD)) {
+    doc.registerFont('report-regular', FONT_REGULAR);
+    doc.registerFont('report-bold', FONT_BOLD);
+    doc.font('report-regular');
+    return {
+      regular: 'report-regular',
+      bold: 'report-bold',
+    };
+  }
+
+  return {
+    regular: 'Helvetica',
+    bold: 'Helvetica-Bold',
+  };
+};
 
 // @desc    Export transactions as CSV
 // @route   GET /api/reports/csv
@@ -63,48 +92,41 @@ const exportPDF = async (req, res) => {
       .populate('category', 'name type')
       .sort('-date');
 
-    // Calculate summary
     const income = transactions.filter((t) => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
     const expenses = transactions.filter((t) => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
     const balance = income - expenses;
 
-    // Create PDF
     const doc = new PDFDocument({ margin: 50 });
+    const fonts = applyPdfFonts(doc);
 
     res.header('Content-Type', 'application/pdf');
     res.header('Content-Disposition', 'attachment; filename=transactions.pdf');
 
     doc.pipe(res);
 
-    // Title
-    doc.fontSize(20).text('Financial Report', { align: 'center' });
+    doc.font(fonts.bold).fontSize(20).text('Financial Report', { align: 'center' });
     doc.moveDown();
 
-    // Date range
     if (startDate || endDate) {
-      doc.fontSize(12).text(`Period: ${startDate || 'Beginning'} to ${endDate || 'Present'}`, { align: 'center' });
+      doc.font(fonts.regular).fontSize(12).text(`Period: ${startDate || 'Beginning'} to ${endDate || 'Present'}`, { align: 'center' });
       doc.moveDown();
     }
 
-    // Summary
-    doc.fontSize(14).text('Summary', { underline: true });
-    doc.fontSize(12);
-    doc.text(`Total Income: $${income.toFixed(2)}`);
-    doc.text(`Total Expenses: $${expenses.toFixed(2)}`);
-    doc.text(`Balance: $${balance.toFixed(2)}`);
+    doc.font(fonts.bold).fontSize(14).text('Summary', { underline: true });
+    doc.font(fonts.regular).fontSize(12);
+    doc.text(`Total Income: ${formatCurrency(income, req.user.currency)}`);
+    doc.text(`Total Expenses: ${formatCurrency(expenses, req.user.currency)}`);
+    doc.text(`Balance: ${formatCurrency(balance, req.user.currency)}`);
     doc.moveDown();
 
-    // Transactions
-    doc.fontSize(14).text('Transactions', { underline: true });
+    doc.font(fonts.bold).fontSize(14).text('Transactions', { underline: true });
     doc.moveDown(0.5);
 
     transactions.forEach((t) => {
-      doc.fontSize(10);
-      doc.text(`${new Date(t.date).toLocaleDateString()} - ${t.category.name} - ${t.type === 'income' ? '+' : '-'}$${t.amount.toFixed(2)}`, {
-        continued: false,
-      });
+      doc.font(fonts.regular).fontSize(10);
+      doc.text(`${new Date(t.date).toLocaleDateString()} - ${t.category.name} - ${t.type === 'income' ? '+' : '-'}${formatCurrency(t.amount, req.user.currency)}`);
       if (t.notes) {
-        doc.fontSize(8).fillColor('gray').text(`  ${t.notes}`).fillColor('black');
+        doc.font(fonts.regular).fontSize(8).fillColor('gray').text(`  ${t.notes}`).fillColor('black');
       }
       doc.moveDown(0.3);
     });

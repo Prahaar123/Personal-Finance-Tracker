@@ -2,8 +2,9 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 
 const ProtectedRoute = ({ children }) => {
-  const { user, loading } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
 
+  // 🔄 Loading spinner
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -12,10 +13,12 @@ const ProtectedRoute = ({ children }) => {
     );
   }
 
-  if (!user) {
+  // 🔐 Not logged in → redirect
+  if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
+  // ✅ Authorized
   return children;
 };
 

@@ -31,21 +31,39 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // 🔥 Handle token expiry
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
 
       try {
         const refreshToken = localStorage.getItem('refreshToken');
+
+        // ❗ If no refresh token → logout
+        if (!refreshToken) {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+          return Promise.reject(error);
+        }
+
         const { data } = await axios.post(`${API_URL}/auth/refresh`, {
           refreshToken,
         });
 
+        // ✅ Save new access token
         localStorage.setItem('accessToken', data.accessToken);
-        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
 
+        // ✅ Retry original request
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`;
         return api(originalRequest);
+
       } catch (refreshError) {
-        localStorage.clear();
+        // ❌ Refresh failed → logout
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+
         window.location.href = '/login';
         return Promise.reject(refreshError);
       }
@@ -104,9 +122,6 @@ export const deleteTransaction = (id) =>
 export const getCategories = (params) =>
   api.get('/categories', { params: cleanParams(params) });
 
-export const getCategory = (id) =>
-  api.get(`/categories/${id}`);
-
 export const createCategory = (data) =>
   api.post('/categories', data);
 
@@ -122,9 +137,6 @@ export const deleteCategory = (id) =>
 export const getBudgets = (params) =>
   api.get('/budgets', { params: cleanParams(params) });
 
-export const getBudget = (id) =>
-  api.get(`/budgets/${id}`);
-
 export const createBudget = (data) =>
   api.post('/budgets', data);
 
@@ -134,17 +146,11 @@ export const updateBudget = (id, data) =>
 export const deleteBudget = (id) =>
   api.delete(`/budgets/${id}`);
 
-export const getBudgetHistory = (categoryId) =>
-  api.get(`/budgets/history/${categoryId}`);
-
 // --------------------
 // Recurring
 // --------------------
 export const getRecurringTransactions = () =>
   api.get('/recurring');
-
-export const getRecurringTransaction = (id) =>
-  api.get(`/recurring/${id}`);
 
 export const createRecurringTransaction = (data) =>
   api.post('/recurring', data);
